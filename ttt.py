@@ -1,18 +1,24 @@
 import math
 from random import choice
 from time import clock
+from copy import deepcopy
 
 
 class GameState(object):
+	# TODO: Convert from predicate into a value in the set {-1, 0, 1}
 	@property
 	def game_over(self):
 		return True
 
 	def get_moves(self):
-		return []
+		return set()
+
+	def get_random_move(self):
+		moves = self.get_moves()
+		return choice(tuple(moves)) if moves != set() else None
 
 	def play_move(self, move):
-		return self
+		pass
 
 
 class TicTacToeState(GameState):
@@ -37,16 +43,12 @@ class TicTacToeState(GameState):
 		return False
 
 	def get_moves(self):
-		assert not self.game_over
-
-		valid_moves = []
-		for move_cell in enumerate(self.board):
-			if move_cell[1] is None:
-				valid_moves.append(move_cell[0])
-		return valid_moves
+		return set({i for i in xrange(len(self.board))
+			if self.board[i] is None})
 	
 	def play_move(self, move):
 		assert self.board[move] is None
+
 		self.board[move] = self.next_turn_player
 		self.next_turn_player = 1 - self.next_turn_player
 
@@ -74,23 +76,25 @@ class GameController(object):
 class RandomGameController(GameController):
 	def get_next_move(self):
 		super(RandomGameController, self).get_next_move()
-		return choice(self.game_state.get_moves())
+		return choice(tuple(self.game_state.get_moves()))
 
 # ----- #
 
 class MCTSNode(object):
-	def __init__(self, parent=None):
-		self.state = None
-		self.move = None
+	def __init__(self, state, parent=None, move=None):
+		self.parent = parent
+		self.move = move
+		self.state = state
 
 		self.plays = 0
 		self.wins = 0
 
-		self.parent = parent
+		self.pending_moves = state.get_moves()
 		self.children = []
-		self.pending_moves = []
 
 	def select_child_ucb(self):
+		# Note that each node's plays count is equal
+		# to the sum of its children's plays
 		def ucb(child):
 			win_ratio = child.wins / child.plays \
 			    + math.sqrt(2 * math.log(self.plays) / child.plays)
@@ -98,39 +102,67 @@ class MCTSNode(object):
 		return max(self.children, key=ucb)
 
 	def expand_move(self, move):
-		assert move in self.pending_moves
-		self.pending_moves = [m for m in pending_moves if m != move]
+		self.pending_moves.remove(move) # raises KeyError
 
 		child_state = deepcopy(self.state)
 		child_state.play_move(move)
-		child_state.pending_moves = child_state.get_moves()
 
-		child = MCTSNode(parent=self, move=move)
+		child = MCTSNode(state=child_state, parent=self, move=move)
+		self.children.append(child)
+		return child
+
+	def __repr__(self):
+		s = 'ROOT\n' if self.parent is None else ''
+
+		children_moves = [c.move for c in self.children]
+
+		s += """Win ratio: {wins} / {plays}
+Pending moves: {pending_moves}
+Children's moves: {children_moves}
+State:
+{state}\n""".format(children_moves=children_moves, **self.__dict__)
+
+		return s
+
 
 class MCTSGameController(GameController):
 	def __init__(self, game_state):
 		super(MCTSGameController, self).__init__(game_state)
-		self.game_tree = MCTSNode()
+		self.root_node = MCTSNode(game_state)
 
 	# ----- #
 
 	def select(self):
-		node = self.game_tree
+		node = self.root_node
 
 		# Descend until we find a node that has pending moves, or is terminal
 		while node.pending_moves == [] and node.children != []:
-			node = self.game_tree.select_child_ucb()
+			node = self.root_node.select_child_ucb()
 
 		return node
 	
 	def expand(self, node):
-		return node # choice(node.children).move
+		assert node.pending_moves != []
 
-	def simulate(self):
-		pass
+		move = choice(tuple(node.pending_moves))
+		return node.expand_move(move)
 
-	def update(self):
-		pass
+	def simulate(self, state, max_iterations=1000):
+		move = state.get_random_move()
+		while move is not None:
+			state.play_move(move)
+			move = state.get_random_move()
+
+			max_iterations -= 1
+			if max_iterations <= 0:
+				return 0.5 # raise exception?
+
+		return state.game_over # state.game_result
+		
+	def update(self, node, result):
+		while node.parent is not None:
+			# TODO: Update result based on each node's point of view
+			pass
 
 	# ----- #
 	
@@ -145,22 +177,21 @@ class MCTSGameController(GameController):
 			node = self.select()
 
 			# Expand a child at random
-			if node.children != []:
+			if node.pending_moves != []:
 				node = self.expand()
 
 			# Simulate until we reach a terminal state
-			result = self.simulate()
+			result = self.simulate(node.state)
 
 			# Update (propagate results up the tree)
 			self.update(node, result)
 
 		# Return most visited node's move
-		# return max(self.game_tree.children, key=lambda n: n.plays)
-		return choice(self.game_state.get_moves())
+		return max(self.root_node.children, key=lambda n: n.plays).move
 
 # ----- #
 
-def random_play():
+def test_play():
 	ttts = TicTacToeState()
 	players = (MCTSGameController(ttts), RandomGameController(ttts))
 
@@ -170,10 +201,8 @@ def random_play():
 	
 		print ttts
 
-def sequenced_play():
+def state_sequence():
 	ttts = TicTacToeState()
-	players = (MCTSGameController(ttts), RandomGameController(ttts))
-
 	moves = [4, 2, 6, 1, 0, 3, 8] # Player 0 wins
 
 	for move in moves:
@@ -182,8 +211,17 @@ def sequenced_play():
 
 		print ttts
 
+def test_steps():
+	root = MCTSNode(TicTacToeState())
+
+	print root
+	root.expand_move(4)
+	print root
+	root.expand_move(1)
+	print root
+
 def main():
-	sequenced_play()
+	test_steps()
 
 
 if __name__ == '__main__':
