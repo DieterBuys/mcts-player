@@ -5,7 +5,6 @@ from random import choice
 
 from game_states import GameState
 
-# ----- #
 
 class GameController(object):
     def get_next_move(self, state):
@@ -17,7 +16,6 @@ class RandomGameController(GameController):
         super(RandomGameController, self).get_next_move(state)
         return choice(tuple(state.get_moves()))
 
-# ----- #
 
 class MCTSNode(object):
     def __init__(self, state, parent=None, move=None):
@@ -109,8 +107,6 @@ class MCTSGameController(GameController):
             node.score += node.get_score(result)
             node = node.parent
 
-    # ----- #
-    
     def get_next_move(self, state, time_allowed=1.0):
         super(MCTSGameController, self).get_next_move(state)
 
