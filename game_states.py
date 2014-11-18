@@ -2,8 +2,14 @@ from random import choice
 
 
 class GameState(object):
-    # The players are 0 and 1. Player 0 always moves first.
-    # Game results are in the range 0-1 accordingly with 0.5 for a draw.
+    """GameState generic base class.
+
+    This class represents the interface that other game classes must conform to.
+    It assumes a two-player game. The players are numbered 0 and 1, with the
+    first move always going to player 0. Game results are expected to be in the
+    range [0.0, 1.0] representing whether player 0 or 1 is the victor.
+    In the case of a draw the result should be 0.5.
+    """
 
     def __init__(self):
         self.next_turn_player = 0
@@ -24,6 +30,13 @@ class GameState(object):
 
 
 class TicTacToeState(GameState):
+    """Tic Tac Toe game state.
+
+    An implementation of the rules of tic tac toe. This serves as a simple
+    example of a two-player turn-based game to illustrate the mechanics of
+    the MCTS algorithm.
+    """
+
     def __init__(self):
         super(TicTacToeState, self).__init__()
 
