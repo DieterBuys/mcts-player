@@ -7,17 +7,38 @@ from game_states import GameState
 
 
 class GameController(object):
+    """Game Controller.
+
+    A generic interface that all game controllers must abide by so that they
+    can be put on trial against one another. Each game is conducted between
+    a pair of concrete GameController instances representing the two players.
+    """
+
     def get_next_move(self, state):
         assert state.game_result is None
 
 
 class RandomGameController(GameController):
+    """Random Game Controller.
+
+    This game controller will play any game by simply selecting moves at random.
+    It serves as a benchmark for the performance of the MCTSGameController.
+    """
+
     def get_next_move(self, state):
         super(RandomGameController, self).get_next_move(state)
         return choice(tuple(state.get_moves()))
 
 
 class MCTSNode(object):
+    """Monte Carlo Tree Node.
+
+    Each node encapsulates a particular game state, the moves that
+    are possible from that state and the strategic information accumulated
+    by the tree search as it progressively samples the game space.
+
+    """
+
     def __init__(self, state, parent=None, move=None):
         self.parent = parent
         self.move = move
@@ -72,6 +93,14 @@ State:
 
 
 class MCTSGameController(GameController):
+    """Game controller that uses MCTS to determine the next move.
+
+    This is the class which implements the Monte Carlo Tree Search algorithm.
+    It builds a game tree of MCTSNodes and samples the game space until a set
+    time has elapsed.
+
+    """
+
     def select(self):
         node = self.root_node
 
@@ -112,23 +141,16 @@ class MCTSGameController(GameController):
 
         # Create new tree (TODO: Preserve some state for better performance?)
         self.root_node = MCTSNode(state)
-
         iterations = 0
 
-        # Repeat while there is time
         start_time = clock()
         while clock() < start_time + time_allowed:
-            # Select based on UCB
             node = self.select()
 
-            # Expand a child at random
             if node.pending_moves != set():
                 node = self.expand(node)
 
-            # Simulate until we reach a terminal state
             result = self.simulate(node.state)
-
-            # Update (propagate results up the tree)
             self.update(node, result)
 
             iterations += 1
