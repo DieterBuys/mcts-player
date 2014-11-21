@@ -81,6 +81,12 @@ class TicTacToeState(GameState):
         return s
 
 class ConnectFourGameState(GameState):
+    """Connect Four Game State.
+
+    Implements the classic children's game of "Connect Four". Players alternate
+    dropping coloured discs into a grid-shaped frame from above until one player
+    forms a row, column or diagonal of four discs.
+    """
     def __init__(self, board_width=7, board_height=6):
         super(ConnectFourGameState, self).__init__()
 
