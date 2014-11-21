@@ -1,7 +1,7 @@
 import argparse
 from collections import defaultdict
 
-from game_states import GameState, TicTacToeState
+from game_states import GameState, TicTacToeState, ConnectFourGameState
 from game_controllers import RandomGameController, MCTSGameController, MCTSNode
 
 
@@ -24,19 +24,24 @@ def test_steps():
     root.expand_move(1)
     print root
 
-def test_play(trials=100):
+def test_play(trials=100, GameStateClass=TicTacToeState):
     players = (MCTSGameController(), RandomGameController())
+
+    GameStateClass = ConnectFourGameState
 
     results = defaultdict(int)
     for game_number in xrange(1, trials+1):
-        ttts = TicTacToeState()
+        game_state = GameStateClass()
 
-        while ttts.game_result is None:
-            next_move = players[ttts.next_turn_player].get_next_move(ttts)
-            ttts.play_move(next_move)
+        while game_state.game_result is None:
+            next_move = players[game_state.next_turn_player].get_next_move(game_state)
+            game_state.play_move(next_move)
 
-        print game_number, ttts.game_result
-        results[ttts.game_result] += 1
+        print game_state
+        print game_number, game_state.game_result
+        print
+        
+        results[game_state.game_result] += 1
 
     print results
 

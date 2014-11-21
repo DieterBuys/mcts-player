@@ -79,3 +79,95 @@ class TicTacToeState(GameState):
 
             s += '\n' if i % 3 == 2 else ' '
         return s
+
+class ConnectFourGameState(GameState):
+    def __init__(self, board_width=7, board_height=6):
+        super(ConnectFourGameState, self).__init__()
+
+        assert board_width > 3
+        assert board_height > 3
+
+        self.board_width, self.board_height = board_width, board_height
+        self.board = [ None, ] * (board_width * board_height)
+
+    def get_cell(self, x, y):
+        return self.board[y * self.board_width + x]
+
+    def set_cell(self, x, y, state):
+        self.board[y * self.board_width + x] = state
+
+    @property
+    def game_result(self):
+        def check_segment(segment):
+            for cell in segment:
+                if cell is None or cell != segment[0]:
+                    return None
+            return segment[0]
+
+        # Rows
+        def row_segment(x, y):
+            return [self.get_cell(x + dx, y) for dx in xrange(4)]
+
+        for x in xrange(0, self.board_width - 4):
+            for y in xrange(0, self.board_height):
+                segment_result = check_segment(row_segment(x, y))
+                if segment_result is not None:
+                    return segment_result
+
+        # Columns
+        def column_segment(x, y):
+            return [self.get_cell(x, y + dy) for dy in xrange(4)]
+
+        for x in xrange(0, self.board_width):
+            for y in xrange(0, self.board_height - 4):
+                segment_result = check_segment(column_segment(x, y))
+                if segment_result is not None:
+                    return segment_result
+
+        # Forward Diagonals (i.e. like forward slash /)
+        def forward_diagonal_segment(x, y):
+            return [self.get_cell(x + delta, y + 3 - delta)
+                for delta in xrange(4)]
+
+        # Back Diagonals (i.e. like back slash \)
+        def back_diagonal_segment(x, y):
+            return [self.get_cell(x + delta, y + delta)
+                for delta in xrange(4)]
+
+        for x in xrange(0, self.board_width - 4):
+            for y in xrange(0, self.board_height - 4):
+                segment_result = check_segment(forward_diagonal_segment(x, y))
+                if segment_result is not None:
+                    return segment_result
+
+                segment_result = check_segment(back_diagonal_segment(x, y))
+                if segment_result is not None:
+                    return segment_result
+
+    def get_moves(self):
+        return set(x for x in xrange(self.board_width)
+            if self.get_cell(x, 0) is None)
+
+    def play_move(self, move):
+        # A move in connect 4 is an x ordinate specifying which column to drop
+        # the disc in from above. Thus we scan from the bottom up for the first
+        # empty cell.
+        for y in xrange(self.board_height - 1, -1, -1):
+            if self.get_cell(move, y) is None:
+                self.set_cell(move, y, self.next_turn_player)
+                self.next_turn_player = 1 - self.next_turn_player
+                return
+
+        assert False # TODO: should raise InvalidMoveException
+
+    def __repr__(self):
+        s = ''
+        for y in xrange(self.board_height):
+            for x in xrange(self.board_width):
+                if self.get_cell(x, y) is None:
+                    s += '.'
+                else:
+                    s += ('O', 'X')[self.get_cell(x, y)]
+                s += ' '
+            s += '\n'
+        return s

@@ -8,7 +8,7 @@ Currently it can play Tic Tac Toe.
 ## Usage
 
 ```
-bash$ python main.py
+[~]> python main.py
 ```
 
 ## References
