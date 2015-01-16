@@ -114,7 +114,7 @@ class ConnectFourGameState(GameState):
         def row_segment(x, y):
             return [self.get_cell(x + dx, y) for dx in xrange(4)]
 
-        for x in xrange(0, self.board_width - 4):
+        for x in xrange(0, self.board_width - 4 + 1):
             for y in xrange(0, self.board_height):
                 segment_result = check_segment(row_segment(x, y))
                 if segment_result is not None:
@@ -125,7 +125,7 @@ class ConnectFourGameState(GameState):
             return [self.get_cell(x, y + dy) for dy in xrange(4)]
 
         for x in xrange(0, self.board_width):
-            for y in xrange(0, self.board_height - 4):
+            for y in xrange(0, self.board_height - 4 + 1):
                 segment_result = check_segment(column_segment(x, y))
                 if segment_result is not None:
                     return segment_result
@@ -140,8 +140,8 @@ class ConnectFourGameState(GameState):
             return [self.get_cell(x + delta, y + delta)
                 for delta in xrange(4)]
 
-        for x in xrange(0, self.board_width - 4):
-            for y in xrange(0, self.board_height - 4):
+        for x in xrange(0, self.board_width - 4 + 1):
+            for y in xrange(0, self.board_height - 4 + 1):
                 segment_result = check_segment(forward_diagonal_segment(x, y))
                 if segment_result is not None:
                     return segment_result
@@ -150,17 +150,20 @@ class ConnectFourGameState(GameState):
                 if segment_result is not None:
                     return segment_result
 
+        # Draw if the board got filled without any winner
+        return 0.5 if self.get_moves() == set() else None
+
     def get_moves(self):
         return set(x for x in xrange(self.board_width)
             if self.get_cell(x, 0) is None)
 
-    def play_move(self, move):
+    def play_move(self, x):
         # A move in connect 4 is an x ordinate specifying which column to drop
         # the disc in from above. Thus we scan from the bottom up for the first
         # empty cell.
         for y in xrange(self.board_height - 1, -1, -1):
-            if self.get_cell(move, y) is None:
-                self.set_cell(move, y, self.next_turn_player)
+            if self.get_cell(x, y) is None:
+                self.set_cell(x, y, self.next_turn_player)
                 self.next_turn_player = 1 - self.next_turn_player
                 return
 
